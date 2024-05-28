@@ -3,9 +3,8 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
-// import User from './models/user.model'
-
 import userRouter from './routes/user.routes.js'
+import authRouter from './routes/auth.routes.js'
 
 dotenv.config()
 const app = express();
@@ -18,6 +17,7 @@ mongoose
 app.use(cors());
 app.use(express.json());
 app.use("/api/user", userRouter)
+app.use("/auth", authRouter)
 
 app.listen(process.env.PORT, () =>
   console.log(`Server running on port: ${process.env.PORT}`)
