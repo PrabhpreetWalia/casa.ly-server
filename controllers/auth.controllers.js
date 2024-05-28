@@ -102,6 +102,15 @@ export const resendOTP = async (req, res) => {
   try {
     const { username } = req.body;
 
+    const oldUser = await User.findOne({ username: username });
+
+    if (!oldUser) {
+      res
+        .status(401)
+        .json({ success: false, message: "Username doesn't exist" });
+      return;
+    }
+
     const OTP = generateOTP();
     const hashedOTP = await bcrypt.hash(OTP, 10);
 
@@ -129,21 +138,19 @@ export const checkOTP = async (req, res) => {
     const user = await User.findOne({ username: username });
 
     if (!user) {
-      res.status(500).json({ success: false, message: "Username incorrect" });
+      res
+        .status(401)
+        .json({ success: false, message: "Username doesn't exist" });
       return;
     }
 
     const currentDate = new Date();
-  const otpExpiryDate = new Date(user.OTP_exp);
+    const otpExpiryDate = new Date(user.OTP_exp);
 
-  console.log(`Current Date: ${currentDate}`);
-  console.log(`OTP Expiry Date: ${otpExpiryDate}`);
-  console.log(user.OTP_exp)
-
-  if (currentDate > otpExpiryDate) {
-    res.status(400).json({ success: false, message: "OTP expired" });
-    return;
-  }
+    if (currentDate > otpExpiryDate) {
+      res.status(401).json({ success: false, message: "OTP expired" });
+      return;
+    }
 
     bcrypt.compare(OTP, user.OTP, async (err, result) => {
       if (result) {
@@ -151,11 +158,90 @@ export const checkOTP = async (req, res) => {
         await user.save();
         res.status(201).json({ success: true, message: "User verified" });
       } else {
-        res.status(500).json({ success: false, message: "Incorrect OTP" });
+        res.status(401).json({ success: false, message: "Incorrect OTP" });
       }
     });
-  } catch (e){
-    console.log(e)
-    res.status(500).json({ success: false, message: "Incorrect OTP" });
+  } catch (e) {
+    console.log(e);
+    res.status(401).json({ success: false, message: "Incorrect OTP" });
+  }
+};
+
+export const signIn = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    const user = await User.findOne({ username: username });
+
+    if (!user) {
+      res
+        .status(401)
+        .json({ success: false, message: "Username doesn't exist" });
+      return;
+    }
+
+    let isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      res.status(401).json({ success: false, message: "Wrong Password" });
+      return;
+    }
+
+    if (!user.verified) {
+      res.status(401).json({
+        success: false,
+        message: "Verification pending",
+        OTPRequired: true,
+      });
+      return;
+    }
+
+    res
+      .status(200)
+      .json({ success: true, message: "Logged in", token: "token" });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const { username, newPassword, OTP } = req.body;
+
+    const user = await User.findOne({ username: username });
+
+    if (!user) {
+      res
+        .status(401)
+        .json({ success: false, message: "Username doesn't exist" });
+      return;
+    }
+
+    const currentDate = new Date();
+    const otpExpiryDate = new Date(user.OTP_exp);
+
+    if (currentDate > otpExpiryDate) {
+      res.status(401).json({ success: false, message: "OTP expired" });
+      return;
+    }
+
+    const verified = await bcrypt.compare(OTP, user.OTP);
+
+    if (verified) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
+      user.verified = true;
+      await user.save();
+      res
+      .status(200)
+      .json({ success: true, message: "Password Changed"});
+    } else {
+      res.status(401).json({ success: false, message: "Incorrect OTP" });
+    }
+
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
