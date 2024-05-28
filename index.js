@@ -1,17 +1,24 @@
-const express = require('express')
-const cors = require('cors')
-const mongoose = require('mongoose')
-require('dotenv').config()
+import express from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-const app = express()
+// import User from './models/user.model'
 
-mongoose.connect(process.env.DB)
+import userRouter from './routes/user.routes.js'
 
-app.use(cors)
-app.use(express.json)
+dotenv.config()
+const app = express();
 
-app.get("/", ()=>{
-    console.log("hello")
-})
+mongoose
+  .connect(process.env.DB, { useNewUrlParser: true, useUnifiedTopology: true})
+  .then(() => console.log("Database connected"))
+  .catch((e) => console.log(e));
 
-app.listen(process.env.PORT, ()=> console.log(`Server running on port: ${process.env.PORT}`))
+app.use(cors());
+app.use(express.json());
+app.use("/api/user", userRouter)
+
+app.listen(process.env.PORT, () =>
+  console.log(`Server running on port: ${process.env.PORT}`)
+);
