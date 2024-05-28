@@ -10,13 +10,13 @@ async function sendEmail(email, otp, res) {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "casa.ly.business@gmail.com",
-      pass: "lumx knfv gwrt nwkh",
+      user: process.env.EMAIL_ID,
+      pass: process.env.EMAIL_PASSWORD,
     },
   });
 
   const mailOptions = {
-    from: "casa.ly.business@gmail.com",
+    from: process.env.EMAIL_ID,
     to: email,
     subject: "Your Casa.ly Verification Code",
     text: `Dear User,
